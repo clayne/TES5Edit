@@ -342,6 +342,33 @@ end;
 
 { TES5saves }
 
+function SaveVersionDecider(aMinimum: Integer; aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
+var
+  aType : Integer;
+  Element : IwbElement;
+  Container: IwbDataContainer;
+begin
+  Result := 0;
+  if not Assigned(aElement) then Exit;
+  Element := aElement;
+  while Assigned(Element.Container) do
+    Element := Element.Container;
+
+  if Supports(Element, IwbContainer, Container) then begin
+    Element := Container.ElementByPath['Save File Header\Header\Version'];
+    if Assigned(Element) then begin
+      aType := Element.NativeValue;
+      if aType>aMinimum then
+        Result := 1;
+    end;
+  end;
+end;
+
+function SaveVersionGreaterThan11Decider(aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
+begin
+  Result := SaveVersionDecider(11, aBasePtr, aEndPtr, aElement);
+end;
+
 function SaveFormVersionDecider(aMinimum: Integer; aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
 var
   aType : Integer;
@@ -407,8 +434,14 @@ function ScreenShotDataCounter(aBasePtr: Pointer; aEndPtr: Pointer; const aEleme
 var
   Element : IwbElement;
   Container: IwbDataContainer;
+  BitSize: Integer;
 begin
   Result := 0;
+  if 1 = SaveVersionGreaterThan11Decider(aBasePtr, aEndPtr, aElement) then
+    BitSize := 4
+  else
+    BitSize := 3;
+
   if not Assigned(aElement) then Exit;
   Element := aElement;
   while Assigned(Element.Container) do
@@ -420,7 +453,7 @@ begin
       Result := Element.NativeValue;
       Element := Container.ElementByPath['Save File Header\Header\Screenshot Height'];
       if Assigned(Element) then begin
-        Result := 3 * Result * Element.NativeValue;
+        Result := BitSize * Result * Element.NativeValue;
       end;
     end;
   end;
@@ -5986,10 +6019,12 @@ begin
     ,wbInteger('Header Size', itU32)
     ,wbHeader
     ,wbByteArray('Hidden: Screenshot Data', ScreenShotDataCounter)
-    ,wbInteger('Form Version', itU8)
+    ,wbUnion('', SaveVersionGreaterThan11Decider, [wbInteger('Form Version', itU8), wbByteArray('Unknown', 14)])
     ,wbInteger('PluginInfo Size', itU32)
     ,wbArray(wbFilePlugins, wbLenString('PluginName', 2), -4)
-    ,wbFileLocationTable
+//    ,wbFileLocationTable
+    ,wbByteArray('Unused', SkipCounter) // Lets you skip an arbitrary number of byte, Setable from CommandLine -bts:n
+    ,wbArray('Remaining',  WbByteArray('Unknown', wbBytesToGroup), DumpCounter) // Lets you dump an arbitrary number of quartet, Setable from CommandLine -btd:n
   ]);
 
   wbSaveChapters := wbStruct('Save File Chapters', [
