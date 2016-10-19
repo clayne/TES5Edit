@@ -6019,9 +6019,9 @@ begin
     ,wbInteger('Header Size', itU32)
     ,wbHeader
     ,wbByteArray('Hidden: Screenshot Data', ScreenShotDataCounter)
-    ,wbUnion('', SaveVersionGreaterThan11Decider, [wbInteger('Form Version', itU8), wbByteArray('Unknown', 14)])
+    ,wbUnion('', SaveVersionGreaterThan11Decider, [wbInteger('Form Version', itU8), wbByteArray('Unknown', 13)])
     ,wbInteger('PluginInfo Size', itU32)
-    ,wbArray(wbFilePlugins, wbLenString('PluginName', 2), -4)
+//    ,wbArray(wbFilePlugins, wbLenString('PluginName', 2), -4)
 //    ,wbFileLocationTable
     ,wbByteArray('Unused', SkipCounter) // Lets you skip an arbitrary number of byte, Setable from CommandLine -bts:n
     ,wbArray('Remaining',  WbByteArray('Unknown', wbBytesToGroup), DumpCounter) // Lets you dump an arbitrary number of quartet, Setable from CommandLine -btd:n
