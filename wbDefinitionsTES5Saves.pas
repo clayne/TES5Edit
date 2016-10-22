@@ -49,6 +49,11 @@ var // forward type directives
 
 procedure DefineTES5SavesA;
 begin
+  function IsSSE: Boolean; inline; overload;
+  begin
+    Result := wbGameMode = gmSSE;
+  end;
+
   wbPropTypeEnum := wbEnum([
     {00} 'None',
     {01} 'Object',
@@ -2343,6 +2348,7 @@ end;
 procedure DefineTES5SavesS;  // This is all based on current UESP, and HexDump, Triria TESSaveLib and the Runtime
 var
   wbHeader                   : IwbStructDef;
+  wbAfterScreenShot          : IwbStructDef;
   wbFileLocationTable        : IwbStructDef;
   wbGlobalData               : IwbStructDef;
   wbChangedForm              : IwbStructDef;
@@ -5984,6 +5990,24 @@ begin
       ])
     ]);
 
+if IsSSE then
+  wbHeader := wbStruct('Header', [
+    wbInteger('Version', itU32),
+    wbInteger('Save Number', itU32),
+    wbLenString('Player Name', 2),
+    wbInteger('Player Level', itU32),
+    wbLenString('Save Cell', 2),
+    wbLenString('Save Duration', 2),
+    wbLenString('Player Race Editor ID', 2),
+    wbInteger('Player Sex', itU16, wbSexEnum),
+    wbFloat('Player Current Experience'),
+    wbFloat('Player LevelUp Experience'),
+    wbByteArray('Save Time', 8),
+    wbInteger('Screenshot Width', itU32),
+    wbInteger('Screenshot Height', itU32)
+    wbByteArray('Unknown', 2),
+  ])
+else
   wbHeader := wbStruct('Header', [
     wbInteger('Version', itU32),
     wbInteger('Save Number', itU32),
@@ -6014,12 +6038,22 @@ begin
     wbByteArray('Unused', 15 * 4)
   ]);
 
+if IsSSE then
+  wbAfterScreenShot := wbStruct('Header', [
+    wbByteArray('Unknown', 12),
+  ])
+else
+  wbAfterScreenShot := wbStruct('Header', [
+    wbByteArray('Unknown', 1),
+  ]);
+
   wbSaveHeader := wbStruct('Save File Header', [
      wbString('Magic', 13)
     ,wbInteger('Header Size', itU32)
     ,wbHeader
     ,wbByteArray('Hidden: Screenshot Data', ScreenShotDataCounter)
-    ,wbUnion('', SaveVersionGreaterThan11Decider, [wbInteger('Form Version', itU8), wbByteArray('Unknown', 13)])
+// After the screen shot data there are 12 Bytes for Skyrim SE and One Byte for Skyrim
+    ,wbAfterScreenShot
     ,wbInteger('PluginInfo Size', itU32)
 //    ,wbArray(wbFilePlugins, wbLenString('PluginName', 2), -4)
 //    ,wbFileLocationTable
